@@ -5,7 +5,10 @@ namespace TodoApi.Data
 {
 	public interface ITodoTaskRepository
 	{
-		public IEnumerable<TodoTask> GetTasks();
-		public TodoTask GetTask(int id);
+		bool SaveChanges();
+		IEnumerable<TodoTask> GetAllTasks();
+		TodoTask GetTask(int id);
+		void CreateTodoTask(TodoTask task);
+		void UpdateTask(TodoTask task);
 	}
 }

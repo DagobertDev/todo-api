@@ -5,7 +5,7 @@ using TodoApi.Models;
 
 namespace TodoApi.Controllers
 {
-	[Route("api/tasks")]
+	[Route("tasks")]
 	[ApiController]
 	public class TodoTasksController : ControllerBase
 	{
@@ -19,13 +19,52 @@ namespace TodoApi.Controllers
 		[HttpGet]
 		public ActionResult<IEnumerable<TodoTask>> GetAllTasks()
 		{
-			return Ok(_repository.GetTasks());
+			return Ok(_repository.GetAllTasks());
 		}
 
 		[HttpGet("{id}")]
 		public ActionResult<TodoTask> GetTask(int id)
 		{
-			return Ok(_repository.GetTask(id));
+			var task = _repository.GetTask(id);
+
+			if (task == null)
+			{
+				return NotFound();
+			}
+
+			return Ok(task);
+		}
+
+		[HttpPost]
+		public ActionResult<TodoTask> CreateTask(TodoTask task)
+		{
+			if (string.IsNullOrWhiteSpace(task.Description))
+			{
+				return BadRequest();
+			}
+
+			_repository.CreateTodoTask(task);
+			_repository.SaveChanges();
+
+			return CreatedAtRoute(nameof(GetTask), task.Id, task);
+		}
+
+		[HttpPut("{id}")]
+		public ActionResult<TodoTask> UpdateTask(int id, TodoTask task)
+		{
+			var existingTask = _repository.GetTask(id);
+
+			if (existingTask == null)
+			{
+				return NotFound();
+			}
+
+			existingTask.Description = task.Description;
+
+			_repository.UpdateTask(task);
+			_repository.SaveChanges();
+
+			return NoContent();
 		}
 	}
 }
