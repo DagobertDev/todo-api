@@ -36,8 +36,10 @@ namespace TodoApi.Controllers
 		}
 
 		[HttpPost]
-		public ActionResult<TodoTask> CreateTask(TodoTask task)
+		public ActionResult<TodoTask> CreateTask(TodoTaskWriteDto taskWriteDto)
 		{
+			var task = taskWriteDto.ToTodoTask();
+
 			if (string.IsNullOrWhiteSpace(task.Description))
 			{
 				return BadRequest();
@@ -46,7 +48,7 @@ namespace TodoApi.Controllers
 			_repository.CreateTodoTask(task);
 			_repository.SaveChanges();
 
-			return CreatedAtRoute(nameof(GetTask), task.Id, task);
+			return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
 		}
 
 		[HttpPut("{id}")]
