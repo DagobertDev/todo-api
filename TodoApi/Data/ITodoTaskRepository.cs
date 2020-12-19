@@ -10,5 +10,6 @@ namespace TodoApi.Data
 		TodoTask GetTask(int id);
 		void CreateTodoTask(TodoTask task);
 		void UpdateTask(TodoTask task);
+		void DeleteTask(TodoTask task);
 	}
 }

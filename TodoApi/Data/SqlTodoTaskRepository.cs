@@ -36,5 +36,15 @@ namespace TodoApi.Data
 		{
 			// Changes to an object get implicitly handled
 		}
+
+		public void DeleteTask(TodoTask task)
+		{
+			if (task == null)
+			{
+				throw new ArgumentNullException();
+			}
+
+			_context.TodoTasks.Remove(task);
+		}
 	}
 }

@@ -68,5 +68,21 @@ namespace TodoApi.Controllers
 
 			return NoContent();
 		}
+
+		[HttpDelete("{id}")]
+		public ActionResult DeleteTask(int id)
+		{
+			var existingTask = _repository.GetTask(id);
+
+			if (existingTask == null)
+			{
+				return NotFound();
+			}
+
+			_repository.DeleteTask(existingTask);
+			_repository.SaveChanges();
+
+			return NoContent();
+		}
 	}
 }
