@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TodoApi.Data;
 using TodoApi.Models;
 
 namespace TodoApi.Controllers
 {
+	[Authorize]
 	[Route("tasks")]
 	[ApiController]
 	public class TodoTasksController : ControllerBase
