@@ -2,7 +2,7 @@
 
 namespace TodoApi.Models
 {
-	public class TokenRequestModel
+	public class AuthenticationRequest
 	{
 		[Required]
 		public string Email { get; set; }

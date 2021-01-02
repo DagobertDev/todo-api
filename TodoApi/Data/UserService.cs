@@ -2,9 +2,11 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using TodoApi.Models;
@@ -14,10 +16,10 @@ namespace TodoApi.Data
 {
 	public class UserService : IUserService
 	{
-		private readonly JWT _jwt;
+		private readonly Jwt _jwt;
 		private readonly UserManager<ApplicationUser> _userManager;
 
-		public UserService(UserManager<ApplicationUser> userManager, IOptions<JWT> jwt)
+		public UserService(UserManager<ApplicationUser> userManager, IOptions<Jwt> jwt)
 		{
 			_userManager = userManager;
 			_jwt = jwt.Value;
@@ -30,52 +32,93 @@ namespace TodoApi.Data
 			return (result.Succeeded ? user.Id : null, result);
 		}
 
-		public async Task<AuthenticationModel> GetTokenAsync(TokenRequestModel model)
+		public async Task<AuthenticationResponse> AuthenticateAsync(AuthenticationRequest model)
 		{
-			var authenticationModel = new AuthenticationModel();
 			var user = await _userManager.FindByEmailAsync(model.Email);
+
+			if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+			{
+				return null;
+			}
+
+			var jwtToken = GenerateJwtToken(user);
+			var refreshToken = GenerateRefreshToken();
+
+			user.RefreshTokens.Add(refreshToken);
+			await _userManager.UpdateAsync(user);
+
+			return new AuthenticationResponse(user, jwtToken, refreshToken);
+		}
+
+		public async Task<AuthenticationResponse> RefreshAccessTokenAsync(string token)
+		{
+			var user = await _userManager.Users.SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == token));
 
 			if (user == null)
 			{
-				return authenticationModel;
+				return null;
 			}
 
-			if (!await _userManager.CheckPasswordAsync(user, model.Password))
+			var refreshToken = user.RefreshTokens.SingleOrDefault(t => t.Token == token);
+
+			if (refreshToken == null || !refreshToken.IsActive)
 			{
-				return authenticationModel;
+				return null;
 			}
 
-			authenticationModel.IsAuthenticated = true;
-			var validUntil = DateTime.UtcNow.AddMinutes(_jwt.DurationInMinutes);
-			authenticationModel.ValidUntil = validUntil;
+			refreshToken.Expires = DateTime.UtcNow.AddDays(_jwt.RefreshTokenLifetimeInDays);
+			await _userManager.UpdateAsync(user);
 
-			var jwtSecurityToken = await CreateJwtToken(user, validUntil);
-			authenticationModel.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
-			var rolesList = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
-			authenticationModel.Roles = rolesList;
+			var jwtToken = GenerateJwtToken(user);
 
-			return authenticationModel;
+			return new AuthenticationResponse(user, jwtToken, refreshToken);
 		}
 
-		private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user, DateTime expires)
+		public async Task<bool> RevokeToken(string token)
 		{
-			var userClaims = await _userManager.GetClaimsAsync(user);
-			var roles = await _userManager.GetRolesAsync(user);
-			var roleClaims = roles.Select(t => new Claim("roles", t)).ToList();
+			var user = await _userManager.Users.SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == token));
 
-			var claims = new[]
+			if (user == null)
 			{
-				new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-				new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-				new Claim(JwtRegisteredClaimNames.Email, user.Email),
-				new Claim("uid", user.Id)
-			}.Union(userClaims).Union(roleClaims);
+				return false;
+			}
 
-			var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
-			var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
-			var jwtSecurityToken = new JwtSecurityToken(_jwt.Issuer, _jwt.Audience, claims,
-				expires: expires, signingCredentials: signingCredentials);
-			return jwtSecurityToken;
+			var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
+			user.RefreshTokens.Remove(refreshToken);
+			await _userManager.UpdateAsync(user);
+
+			return true;
+		}
+
+		private RefreshToken GenerateRefreshToken()
+		{
+			using var rngCryptoServiceProvider = new RNGCryptoServiceProvider();
+			var randomBytes = new byte[64];
+			rngCryptoServiceProvider.GetBytes(randomBytes);
+
+			return new RefreshToken
+			{
+				Token = Convert.ToBase64String(randomBytes),
+				Expires = DateTime.UtcNow.AddDays(_jwt.RefreshTokenLifetimeInDays),
+				Created = DateTime.UtcNow
+			};
+		}
+
+		private string GenerateJwtToken(ApplicationUser user)
+		{
+			var tokenHandler = new JwtSecurityTokenHandler();
+			var key = Encoding.ASCII.GetBytes(_jwt.Key);
+			var tokenDescriptor = new SecurityTokenDescriptor
+			{
+				Issuer = _jwt.Issuer,
+				Audience = _jwt.Audience,
+				Subject = new ClaimsIdentity(new[] {new Claim(ClaimTypes.Name, user.Id)}),
+				Expires = DateTime.UtcNow.AddMinutes(_jwt.DurationInMinutes),
+				SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
+					SecurityAlgorithms.HmacSha256Signature)
+			};
+			var token = tokenHandler.CreateToken(tokenDescriptor);
+			return tokenHandler.WriteToken(token);
 		}
 	}
 }

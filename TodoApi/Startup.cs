@@ -40,7 +40,7 @@ namespace TodoApi
 						RequireNonAlphanumeric = false
 					};
 			}).AddEntityFrameworkStores<TodoContext>();
-			services.Configure<JWT>(_configuration.GetSection("JWT"));
+			services.Configure<Jwt>(_configuration.GetSection("JWT"));
 
 			services.AddAuthentication(options =>
 			{
@@ -80,7 +80,7 @@ namespace TodoApi
 
 			app.UseRouting();
 
-			app.UseCors(m => m.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+			app.UseCors(m => m.SetIsOriginAllowed(o => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
 
 			app.UseAuthentication();
 			app.UseAuthorization();
