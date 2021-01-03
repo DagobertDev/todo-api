@@ -25,11 +25,11 @@ namespace TodoApi.Data
 			_jwt = jwt.Value;
 		}
 
-		public async Task<(string, IdentityResult)> RegisterAsync(RegisterModel model)
+		public async Task<IdentityResult> RegisterAsync(RegisterModel model)
 		{
-			var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+			var user = new ApplicationUser { Email = model.Email, UserName = model.Email };
 			var result = await _userManager.CreateAsync(user, model.Password);
-			return (result.Succeeded ? user.Id : null, result);
+			return result;
 		}
 
 		public async Task<AuthenticationResponse> AuthenticateAsync(AuthenticationRequest model)

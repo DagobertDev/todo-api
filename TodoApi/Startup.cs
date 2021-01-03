@@ -31,7 +31,6 @@ namespace TodoApi
 
 			services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 			{
-				options.User.RequireUniqueEmail = true;
 				options.Password = new PasswordOptions
 					{
 						RequireDigit = false,

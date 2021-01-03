@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,14 +21,14 @@ namespace TodoApi.Controllers
 		[HttpPost]
 		public async Task<ActionResult<string>> RegisterAsync(RegisterModel model)
 		{
-			var (id, result) = await _userService.RegisterAsync(model);
+			var result = await _userService.RegisterAsync(model);
 
 			if (!result.Succeeded)
 			{
 				return BadRequest(result.Errors.Select(error => error.Description));
 			}
 
-			return CreatedAtAction("Register", model, id);
+			return NoContent();
 		}
 
 		[HttpPost("refresh-token")]

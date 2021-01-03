@@ -6,7 +6,7 @@ namespace TodoApi.Data
 {
 	public interface IUserService
 	{
-		Task<(string, IdentityResult)> RegisterAsync(RegisterModel model);
+		Task<IdentityResult> RegisterAsync(RegisterModel model);
 		Task<AuthenticationResponse> AuthenticateAsync(AuthenticationRequest model);
 		Task<AuthenticationResponse> RefreshAccessTokenAsync(string refreshToken);
 		Task<bool> RevokeToken(string token);
