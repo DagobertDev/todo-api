@@ -70,6 +70,11 @@ namespace TodoApi
 				app.UseDeveloperExceptionPage();
 			}
 
+			else
+			{
+				app.UseExceptionHandler("/error");
+			}
+
 			app.UseForwardedHeaders(new ForwardedHeadersOptions
 			{
 				ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
